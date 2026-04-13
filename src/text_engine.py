@@ -9,7 +9,7 @@ import unicodedata
 import datetime
 import nepali_datetime
 from difflib import SequenceMatcher
-from config import FUZZY_MATCH_THRESHOLD_HIGH, FUZZY_MATCH_THRESHOLD_LOW
+from src.config import FUZZY_MATCH_THRESHOLD_HIGH, FUZZY_MATCH_THRESHOLD_LOW
 
 # Constants and Maps
 NEP_CONSONANT_MAP = {
@@ -45,14 +45,43 @@ def clean_and_repair_text(raw_text: str) -> str:
 
 
 
+# Inside src/text_engine.py
+
 def extract_demat_fields(text: str) -> dict:
     """Extracts fields from raw Demat OCR text using Regex."""
+    
+    # Helper function to safely extract regex matches
+    def safe_extract(pattern):
+        match = re.search(pattern, text, re.IGNORECASE)
+        return match.group(1).strip() if match else ""
+
+    name = safe_extract(r"Name\s+(.+)")
+    boid = safe_extract(r"BOID\s+(\d+)")
+    dob = safe_extract(r"Date Of Birth\s+(\d{4}-\d{2}-\d{2})")
+    contact = safe_extract(r"Contact Number\s+(\d+)")
+    
+    # --- SMART CITIZENSHIP EXTRACTION ---
+    cit_raw = safe_extract(r"Citizenship Number\s+(.+)")
+    cit_clean = cit_raw
+    
+    if cit_raw:
+        # Remove any subtext that might have been caught (like "* Issued in AD")
+        cit_raw = cit_raw.split('*')[0].strip() 
+        
+        # Handle "DISTRICT-NUMBER-YEAR" format (e.g., BARA-332100/43386-2015)
+        parts = cit_raw.split('-')
+        
+        if len(parts) == 3:
+            cit_clean = parts[1] # Grabs the middle part: 332100/43386
+        elif len(parts) == 2 and parts[0].isalpha():
+            cit_clean = parts[1] # Grabs the part after the district
+            
     return {
-        "name": (re.search(r"Name\s+(.+)", text, re.I) or [None, None])[1],
-        "boid": (re.search(r"BOID\s+(\d+)", text, re.I) or [None, None])[1],
-        "dob": (re.search(r"Date Of Birth\s+(\d{4}-\d{2}-\d{2})", text, re.I) or [None, None])[1],
-        "citizenship": (re.search(r"Citizenship Number\s+(.+)", text, re.I) or [None, None])[1],
-        "contact": (re.search(r"Contact Number\s+(\d+)", text, re.I) or [None, None])[1]
+        "name": name,
+        "boid": boid,
+        "dob": dob,
+        "citizenship": cit_clean,
+        "contact": contact
     }
 
 def get_consonant_skeleton(text: str, script: str = "english") -> str:

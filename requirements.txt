@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+ultralytics
+opencv-python-headless
+pytesseract
+pillow
+numpy
+beautifulsoup4
+python-multipart
+pydantic-settings
+nepali-datetime
+paddlepaddle==3.2.0
+paddleocr==3.3.0
+opencv-python-headless<4.10

@@ -1,9 +1,9 @@
 import logging
-import csv
-import numpy and
+import cv2
+import numpy as np
 from typing import Tuple, Optional
 
-from config import OCR_DEVICE, OCR_LANG, OCR_MODEL_NAME, YOLO_CITIZENSHIP_MODEL, YOLO_ROUTER_MODEL, YOLO_ROUTER_MODEL, settings(
+from src.config import (
     YOLO_ROUTER_MODEL,
     YOLO_CITIZENSHIP_MODEL,
     OCR_LANG,
@@ -37,14 +37,20 @@ def load_models():
     
     try:
         from paddleocr import PaddleOCR
+
         _models["paddle"] = PaddleOCR(
-            lang=OCR_LANG,
-            model_dir=OCR_MODEL_NAME, 
-            device=OCR_DEVICE
-            )
-        logger.info("PaddleOCR model loaded successfully.")
+            text_recognition_model_name=OCR_MODEL_NAME,  # This uses "devanagari_PP-OCRv5_mobile_rec" from config
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=True,
+            device=OCR_DEVICE  # This uses "cpu" from config
+        )
+        logger.info("✅ PaddleOCR loaded successfully with custom devanagari model.")
+
     except Exception as e:
-        logger.error(f"Error loading PaddleOCR model: {e}")
+        logger.error(f"❌ Failed to load PaddleOCR: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # Document Classification
@@ -103,7 +109,7 @@ def extract_text(image: np.ndarray, backend: str = "paddle") -> str:
 
     if backend =="tesseract":
         import pytesseract
-        
+
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
@@ -116,7 +122,7 @@ def extract_text(image: np.ndarray, backend: str = "paddle") -> str:
             raise RuntimeError("Paddle OCR Not Loaded")
         
         # pass the numpy array directly to the Paddle
-        result = _models["paddle"].ocr(image, cls=True)
+        result = _models["paddle"].ocr(image)
 
         # parse Paddle's Nested list output
         extracted_texts = []
